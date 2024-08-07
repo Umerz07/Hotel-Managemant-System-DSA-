@@ -1,0 +1,205 @@
+#include <iostream>
+#include <string>
+#include <algorithm>
+using namespace std;
+
+const int MAX_ROOMS = 10;
+const int MAX_USERS = 10;
+const int MAX_RESERVATIONS = 100;
+
+class Room {
+public:
+    int roomNumber;
+    bool isAvailable;
+
+    Room() : roomNumber(0), isAvailable(true) {}
+
+    Room(int number) : roomNumber(number), isAvailable(true) {}
+};
+
+class User {
+public:
+    string username;
+    string password;
+
+    User() : username(""), password("") {}
+
+    User(const string& uname, const string& pwd) : username(uname), password(pwd) {}
+};
+
+class Reservation {
+public:
+    int roomNumber;
+    string username;
+    int duration;
+
+    Reservation() : roomNumber(0), username(""), duration(0) {}
+
+    Reservation(int room, const string& uname, int days) : roomNumber(room), username(uname), duration(days) {}
+};
+
+class Hotel {
+public:
+    Room rooms[MAX_ROOMS];
+    User users[MAX_USERS];
+    Reservation reservations[MAX_RESERVATIONS];
+    int reservationsCount;
+
+    Hotel() : reservationsCount(0) {
+        for (int i = 1; i <= MAX_ROOMS; ++i) {
+            rooms[i - 1] = Room(i);
+        }
+
+        users[0] = User("umer", "password123");
+        users[1] = User("wahaj", "1234");
+    }
+
+    bool authenticateUser(const string& username, const string& password) const {
+        for (const User& user : users) {
+            if (user.username == username && user.password == password) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool bookRoom(const string& username, int& roomNumber, int& duration) {
+        string password;
+        cout << "Enter password for user " << username << ": ";
+        cin >> password;
+
+        if (!authenticateUser(username, password)) {
+            cout << "Authentication failed. Please check your credentials.\n";
+            return false;
+        }
+
+        displayAvailableRooms();
+
+        cout << "Enter room number to book: ";
+        cin >> roomNumber;
+
+        auto it = find_if(begin(rooms), end(rooms),
+                          [roomNumber](const Room& room) {
+                              return room.roomNumber == roomNumber && room.isAvailable;
+                          });
+
+        if (it != end(rooms)) {
+            cout << "Enter duration of stay (in days): ";
+            cin >> duration;
+
+            it->isAvailable = false;
+            reservations[reservationsCount++] = Reservation(roomNumber, username, duration);
+            cout << "Room booked successfully.\n";
+
+            int roomRate = 100;
+            int totalCost = roomRate * duration;
+            cout << "Total Cost: $" << totalCost << "\n";
+
+            return true;
+        }
+
+        cout << "Room not available for booking.\n";
+        return false;
+    }
+
+    bool cancelReservation(const string& username, int roomNumber) {
+        string password;
+        cout << "Enter password for user " << username << ": ";
+        cin >> password;
+
+        if (!authenticateUser(username, password)) {
+            cout << "Authentication failed. Please check your credentials.\n";
+            return false;
+        }
+
+        auto it = remove_if(begin(reservations), end(reservations),
+                            [username, roomNumber](const Reservation& res) {
+                                return res.username == username && res.roomNumber == roomNumber;
+                            });
+
+        if (it != end(reservations)) {
+            for (Room& room : rooms) {
+                if (room.roomNumber == roomNumber) {
+                    room.isAvailable = true;
+                    break;
+                }
+            }
+
+            reservationsCount--;
+            cout << "Reservation canceled successfully.\n";
+            return true;
+        }
+
+        cout << "No reservation found for the specified room.\n";
+        return false;
+    }
+
+    void displayAvailableRooms() const {
+        cout << "Available Rooms:\n";
+        for (const Room& room : rooms) {
+            if (room.isAvailable) {
+                cout << "Room " << room.roomNumber << "\n";
+            }
+        }
+    }
+};
+
+int main() {
+    Hotel myHotel;
+
+    int choice;
+    do {
+        cout << "\n***** Hotel Management System Menu *****\n";
+        cout << "1. Book Room\n";
+        cout << "2. Display Available Rooms\n";
+        cout << "3. Cancel Reservation\n";
+        cout << "4. Exit\n";
+        cout << "Enter your choice (1-4): ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                string username;
+                int roomNumber, duration;
+                cout << "Enter username: ";
+                cin >> username;
+
+                myHotel.bookRoom(username, roomNumber, duration);
+                break;
+            }
+            case 2: {
+                myHotel.displayAvailableRooms();
+                break;
+            }
+            case 3: {
+                string username;
+                int roomNumber;
+                cout << "Enter username: ";
+                cin >> username;
+
+                cout << "Reservations for user " << username << ":\n";
+                for (int i = 0; i < myHotel.reservationsCount; ++i) {
+                    const Reservation& reservation = myHotel.reservations[i];
+                    if (reservation.username == username) {
+                        cout << "Room " << reservation.roomNumber << " - Duration: " << reservation.duration << " days\n";
+                    }
+                }
+
+                cout << "Enter room number to cancel reservation: ";
+                cin >> roomNumber;
+
+                myHotel.cancelReservation(username, roomNumber);
+                break;
+            }
+            case 4: {
+                cout << "Thanks for choosing us. Goodbye!\n";
+                break;
+            }
+            default:
+                cout << "Invalid choice. Please enter a number between 1 and 4.\n";
+        }
+
+    } while (choice != 4);
+
+    return 0;
+}
